@@ -1,0 +1,27 @@
+﻿# Dependencies
+node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build / temp (but we commit dist/ for the bookmarklet)
+.next/
+dist/*.map
+*.tmp
+
+# IDE
+.vscode/
+.idea/

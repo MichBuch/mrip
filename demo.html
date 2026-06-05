@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mrip — Media Ripper • Demo Page</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#111; color:#ddd; margin:0; padding:20px; line-height:1.4; }
+    h1 { margin:0 0 8px; font-size:28px; }
+    .header { max-width:960px; margin:0 auto 20px; }
+    .section { max-width:960px; margin:0 auto 32px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
+    .card { background:#1f1f1f; border:1px solid #333; border-radius:8px; overflow:hidden; }
+    .card img, .card video { width:100%; height:120px; object-fit:cover; display:block; background:#111; }
+    .card .meta { padding:6px 8px; font-size:12px; }
+    .note { background:#1a1a1a; border-left:4px solid #0a4; padding:10px 14px; font-size:13px; }
+    .install { background:#1f1f1f; padding:16px; border-radius:8px; border:2px dashed #0a4; }
+    .install a { display:inline-block; background:#0a4; color:#fff; padding:10px 18px; border-radius:6px; text-decoration:none; font-weight:600; margin:8px 0; }
+    .install a:hover { background:#0c6; }
+    pre { background:#000; padding:12px; overflow:auto; font-size:12px; }
+    .media-count { font-size:13px; opacity:.7; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>mrip — Media Ripper</h1>
+    <p style="margin:4px 0 0; opacity:.75">Local demo page for developing &amp; testing the bookmarklet</p>
+  </div>
+
+  <!-- Prominent install callout at the very top so it's impossible to miss -->
+  <div style="background:#0a4;color:white;padding:12px 16px;margin:8px;border-radius:8px;text-align:center;font-size:15px;">
+    <strong>👉 UPDATE / INSTALL BOOKMARKLET:</strong><br>
+    <a href="#" id="top-drag-bookmarklet" draggable="true" style="display:inline-block;background:white;color:#0a4;padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:700;margin-top:6px;">Drag this to your Bookmarks Bar → mrip</a>
+    <div style="font-size:12px;margin-top:4px;opacity:0.9;">(If you already have the bookmark, dragging again will update it)</div>
+  </div>
+
+  <div class="section">
+    <div class="note">
+      <strong>How to test:</strong><br>
+      1. Scroll around this page (some images are "lazy" style).<br>
+      2. Click the big green <strong>Run mrip (dev)</strong> button below — it runs the readable development version.<br>
+      3. Or use the bookmarklet string from README.md.<br>
+      4. To install the real bookmarklet, drag the link in the Install box to your bookmarks bar.
+      <br><br><strong>Browser support:</strong> Edge/Chrome/Brave/Opera = full (incl. folder picker). Firefox = excellent overlay + standard downloads (no picker).
+    </div>
+  </div>
+
+  <div class="section">
+    <button onclick="runMripDev()" style="background:#0a4;color:white;border:none;padding:10px 20px;font-size:15px;border-radius:6px;cursor:pointer;font-weight:600">
+      ▶ Run mrip (dev version) on this page
+    </button>
+    <button onclick="document.getElementById('mrip-overlay')?.remove()" style="background:#333;color:#ddd;border:1px solid #555;padding:10px 14px;border-radius:6px;margin-left:8px;cursor:pointer">Remove any overlay</button>
+    <span class="media-count">This page contains a variety of images (local + cross-origin), 1 video, 1 audio.</span>
+  </div>
+
+  <div class="section install">
+    <strong>Install the bookmarklet (drag this):</strong><br>
+    <a href="#" id="drag-bookmarklet" draggable="true">Drag this to your Bookmarks Bar → mrip</a>
+    <div style="font-size:12px;margin-top:6px;opacity:.7">
+      (After dragging, edit the bookmark if needed and paste the full javascript: string from README.md as the URL.)
+    </div>
+  </div>
+
+  <div class="section">
+    <h3 style="margin-bottom:8px">Sample Images (mix of sizes + origins)</h3>
+    <div class="grid" id="image-grid">
+      <!-- Populated by JS below -->
+    </div>
+  </div>
+
+  <div class="section">
+    <h3 style="margin-bottom:8px">Video</h3>
+    <div style="max-width:420px">
+      <video controls width="100%" style="background:#000;border-radius:6px" src="https://test-streams.github.io/streams/vod/mp4/clear/playlist.m3u8" poster="https://picsum.photos/id/1015/640/360">
+        <!-- Fallback direct mp4 if HLS not supported in preview -->
+        Your browser does not support the video tag.
+      </video>
+      <div style="font-size:12px;opacity:.6;margin-top:4px">Example video (may be HLS — bookmarklet will also pick up any &lt;source&gt;)</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3 style="margin-bottom:8px">Audio</h3>
+    <div>
+      <audio controls style="width:100%;max-width:420px">
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+      </audio>
+      <div style="font-size:12px;opacity:.6">Public domain / demo royalty-free track (SoundHelix)</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Direct media links (the collector also picks these up)</h3>
+    <ul>
+      <li><a href="https://picsum.photos/id/1005/1200/800" target="_blank">Direct image link (picsum 1200×800)</a></li>
+      <li><a href="https://test-streams.github.io/streams/vod/mp4/clear/playlist.m3u8">HLS manifest (advanced)</a></li>
+    </ul>
+  </div>
+
+  <div class="section" style="font-size:12px;opacity:.6">
+    Legal note: All demo media are from public placeholder / royalty-free demo sources (picsum.photos, soundhelix, test-streams). Use the real bookmarklet only on content you have rights to download.
+  </div>
+
+<script id="mrip-src">
+// ==================== mrip DEV VERSION (readable) ====================
+// Paste / edit this block when developing. The bookmarklet in README is the compacted version of this logic.
+(function mripDev() {
+  'use strict';
+  const OVERLAY_ID = 'mrip-overlay';
+  if (document.getElementById(OVERLAY_ID)) {
+    document.getElementById(OVERLAY_ID).remove();
+    return;
+  }
+
+  function log(...args) { console.log('[mrip]', ...args); }
+
+  function sanitizeFilename(name) {
+    return (name || 'media').replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 110) || 'media';
+  }
+
+  function getExtension(url, type) {
+    const clean = url.split(/[?#]/)[0];
+    const m = clean.match(/\.([a-z0-9]{2,5})$/i);
+    if (m) return '.' + m[1].toLowerCase();
+    if (type === 'image') return '.jpg';
+    if (type === 'video') return '.mp4';
+    if (type === 'audio') return '.mp3';
+    return '';
+  }
+
+  function upgradeUrlForQuality(url) {
+    if (!url || typeof url !== 'string') return url;
+    // Pinterest common pattern upgrade
+    if (url.includes('pinimg.com')) {
+      let u = url.replace(/\/(originals|\d+x)\//i, '/originals/');
+      u = u.replace(/\/236x\//i, '/736x/');
+      return u;
+    }
+    return url;
+  }
+
+  function collectMedia() {
+    const results = [];
+    const seen = new Set();
+
+    // 1. Images
+    document.querySelectorAll('img').forEach((img) => {
+      let url = img.currentSrc || img.src || '';
+      if (!url) return;
+      if (url.startsWith('data:') && url.length < 300) return; // skip tiny data URIs / icons
+      const w = img.naturalWidth || img.width || 0;
+      const h = img.naturalHeight || img.height || 0;
+      if (w > 0 && h > 0 && w < 36 && h < 36) return; // skip very small icons
+      url = upgradeUrlForQuality(url);
+      if (seen.has(url)) return;
+      seen.add(url);
+      results.push({
+        url,
+        type: 'image',
+        w,
+        h,
+        alt: (img.alt || img.title || img.getAttribute('data-alt') || '').trim(),
+        el: img
+      });
+    });
+
+    // 2. Videos + sources
+    document.querySelectorAll('video').forEach((vid) => {
+      const candidates = [];
+      if (vid.currentSrc) candidates.push(vid.currentSrc);
+      if (vid.src) candidates.push(vid.src);
+      vid.querySelectorAll('source').forEach(s => { if (s.src) candidates.push(s.src); });
+      candidates.forEach(u => {
+        if (!u || seen.has(u)) return;
+        seen.add(u);
+        results.push({ url: u, type: 'video', alt: (vid.title || vid.getAttribute('aria-label') || '').trim(), el: vid });
+      });
+    });
+
+    // 3. Audio + sources
+    document.querySelectorAll('audio').forEach((aud) => {
+      const candidates = [];
+      if (aud.currentSrc) candidates.push(aud.currentSrc);
+      if (aud.src) candidates.push(aud.src);
+      aud.querySelectorAll('source').forEach(s => { if (s.src) candidates.push(s.src); });
+      candidates.forEach(u => {
+        if (!u || seen.has(u)) return;
+        seen.add(u);
+        results.push({ url: u, type: 'audio', alt: (aud.title || '').trim(), el: aud });
+      });
+    });
+
+    // 4. Direct <a> links to common media extensions (great for galleries)
+    document.querySelectorAll('a[href]').forEach((a) => {
+      const href = a.href;
+      if (!href || seen.has(href)) return;
+      const lower = href.toLowerCase();
+      const isMedia = /\.(jpe?g|png|gif|webp|avif|svg|mp4|webm|mov|mp3|wav|ogg|flac|m4a)(\?|$|#)/i.test(lower);
+      if (isMedia) {
+        seen.add(href);
+        const t = /\.(mp4|webm|mov)/i.test(lower) ? 'video' : /\.(mp3|wav|ogg|flac|m4a)/i.test(lower) ? 'audio' : 'image';
+        results.push({
+          url: href,
+          type: t,
+          alt: (a.textContent || a.title || '').trim().slice(0, 80),
+          el: a
+        });
+      }
+    });
+
+    log('Collected', results.length, 'unique media items');
+    return results;
+  }
+
+  // --- Download helpers ---
+
+  async function saveViaFileSystemAccess(item, dirHandle) {
+    try {
+      const response = await fetch(item.url, { mode: 'cors', credentials: 'omit' });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const blob = await response.blob();
+      const ext = getExtension(item.url, item.type);
+      const base = sanitizeFilename(item.alt || item.url.split('/').pop() || 'file');
+      const filename = base.endsWith(ext) ? base : base + ext;
+
+      const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return { ok: true };
+    } catch (err) {
+      log('FS write failed for', item.url, err.message || err);
+      // Fallback to link method
+      return saveViaDownloadLink(item);
+    }
+  }
+
+  function saveViaDownloadLink(item) {
+    return new Promise((resolve) => {
+      const a = document.createElement('a');
+      a.href = item.url;
+      const ext = getExtension(item.url, item.type);
+      const base = sanitizeFilename(item.alt || item.url.split('/').pop() || 'file');
+      a.download = base.endsWith(ext) ? base : base + ext;
+      a.style.position = 'absolute';
+      a.style.left = '-9999px';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        a.remove();
+        resolve({ ok: true, via: 'link' });
+      }, 160);
+    });
+  }
+
+  async function performDownloads(selectedItems) {
+    if (!selectedItems || !selectedItems.length) return;
+
+    const useFS = 'showDirectoryPicker' in window;
+    let dirHandle = null;
+
+    if (useFS) {
+      try {
+        dirHandle = await window.showDirectoryPicker({
+          id: 'mrip-downloads',
+          mode: 'readwrite',
+          startIn: 'downloads'
+        });
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          log('User canceled folder picker');
+          return;
+        }
+        log('Could not get directory handle, falling back to downloads folder', e);
+      }
+    }
+
+    const progressEl = document.getElementById('mrip-progress');
+    let completed = 0;
+    const total = selectedItems.length;
+
+    function setProgress(n) {
+      if (progressEl) progressEl.textContent = `Downloading ${n} / ${total} ...`;
+    }
+    setProgress(0);
+
+    for (let i = 0; i < selectedItems.length; i++) {
+      const item = selectedItems[i];
+      setProgress(i + 1);
+      try {
+        if (dirHandle) {
+          try {
+            await saveViaFileSystemAccess(item, dirHandle);
+          } catch (fsErr) {
+            log('FS write error', item.url, fsErr);
+            if (fsErr && (fsErr.name === 'NotAllowedError' || fsErr.name === 'SecurityError' || /permission|denied|access/i.test(String(fsErr)))) {
+              const p = document.getElementById('mrip-progress');
+              if (p) p.textContent = 'Permission writing to folder — using browser Downloads for remaining';
+              dirHandle = null;
+            }
+            await saveViaDownloadLink(item);
+          }
+        } else {
+          await saveViaDownloadLink(item);
+        }
+      } catch (e) {
+        log('Failed to download', item.url, e);
+      }
+      // small delay to be nice to the browser and avoid rate limits / popup blocks
+      await new Promise(r => setTimeout(r, 140));
+      completed++;
+    }
+
+    if (progressEl) {
+      progressEl.textContent = `Finished ${completed}/${total}. You can close the overlay.`;
+    }
+
+    // Auto-close after success (optional)
+    setTimeout(() => {
+      const ov = document.getElementById(OVERLAY_ID);
+      if (ov) ov.remove();
+    }, 1400);
+  }
+
+  // --- UI ---
+
+  function createOverlay(items) {
+    const overlay = document.createElement('div');
+    overlay.id = OVERLAY_ID;
+    overlay.style.cssText = `
+      position:fixed; inset:0; z-index:2147483647; background:rgba(15,15,15,0.82);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; color:#e6e6e6;
+      display:flex; flex-direction:column; backdrop-filter:blur(1px);
+    `;
+
+    // Header
+    const header = document.createElement('div');
+    header.style.cssText = 'padding:8px 14px; background:#0f0f0f; border-bottom:1px solid #333; display:flex; align-items:center; gap:10px; flex:0 0 auto;';
+    const supportsFS = 'showDirectoryPicker' in window;
+    const modeBadge = supportsFS ? 'FS' : 'DL';
+    header.innerHTML = `
+      <div style="font-size:15px;font-weight:700;letter-spacing:0.3px">mrip — Media Ripper</div>
+      <span style="font-size:9px;opacity:0.5;background:#222;padding:1px 4px;border-radius:2px;margin-left:6px" title="${supportsFS ? 'Direct folder write supported (Edge/Chrome/Brave/Opera)' : 'Standard download fallback (Firefox etc.)'}">${modeBadge}</span>
+      <div id="mrip-count" style="font-size:12px;opacity:0.65;margin-left:6px"></div>
+      <div style="flex:1"></div>
+      <button id="mrip-close-btn" style="background:#222;border:1px solid #444;color:#ddd;padding:5px 11px;border-radius:4px;cursor:pointer;font-size:13px">Close (ESC)</button>
+    `;
+    overlay.appendChild(header);
+
+    // Toolbar
+    const toolbar = document.createElement('div');
+    toolbar.style.cssText = 'padding:6px 12px;background:#181818;border-bottom:1px solid #333;flex:0 0 auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px';
+    toolbar.innerHTML = `
+      <button id="btn-selall">Select All</button>
+      <button id="btn-none">None</button>
+      <button id="btn-invert">Invert</button>
+      <span style="width:8px"></span>
+      <label>Type:
+        <select id="filter-type" style="background:#222;border:1px solid #444;color:#ddd;padding:2px 4px">
+          <option value="">All</option>
+          <option value="image">Images</option>
+          <option value="video">Videos</option>
+          <option value="audio">Audio</option>
+        </select>
+      </label>
+      <label style="margin-left:6px">Min dim:
+        <input id="filter-minsize" type="number" value="60" style="width:52px;background:#222;border:1px solid #444;color:#ddd;padding:1px 3px">
+      </label>
+      <span style="flex:1"></span>
+      <button id="btn-copy" style="background:#1f2a44">Copy Selected URLs</button>
+      <button id="btn-download" style="background:#0a4;color:white;font-weight:600;padding-left:14px;padding-right:14px">Download Selected (0)</button>
+    `;
+    overlay.appendChild(toolbar);
+
+    // Grid body
+    const grid = document.createElement('div');
+    grid.style.cssText = 'flex:1 1 auto; overflow:auto; padding:10px; display:grid; grid-template-columns:repeat(auto-fill, minmax(148px, 1fr)); gap:8px; align-content:start;';
+    overlay.appendChild(grid);
+
+    // Footer
+    const footer = document.createElement('div');
+    footer.style.cssText = 'padding:6px 12px; background:#0f0f0f; font-size:11px; border-top:1px solid #333; flex:0 0 auto; display:flex; gap:16px; align-items:center';
+    footer.innerHTML = `
+      <div id="mrip-progress" style="flex:1;color:#8f8"></div>
+      <div style="opacity:0.55">Personal use only • Only download what you have rights to</div>
+    `;
+    overlay.appendChild(footer);
+
+    document.documentElement.appendChild(overlay); // use html to be more aggressive
+
+    // State
+    let visibleItems = items.slice();
+    const checkMap = new Map(); // item -> checkbox
+
+    function renderGrid(list) {
+      grid.innerHTML = '';
+      checkMap.clear();
+
+      list.forEach(item => {
+        const card = document.createElement('div');
+        card.style.cssText = 'background:#1f1f1f;border:1px solid #333;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;font-size:12px';
+
+        // top bar
+        const top = document.createElement('div');
+        top.style.cssText = 'display:flex;align-items:center;gap:5px;padding:3px 6px;background:#181818;font-size:10px';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = false;
+        cb.style.cssText = 'margin:0';
+        const badge = document.createElement('span');
+        badge.textContent = item.type;
+        badge.style.cssText = 'font-size:9px;background:#2a2a2a;padding:0 4px;border-radius:2px';
+        top.append(cb, badge);
+
+        if (item.w && item.h) {
+          const dims = document.createElement('span');
+          dims.textContent = `${item.w}×${item.h}`;
+          dims.style.cssText = 'opacity:.5;margin-left:auto;font-size:9px';
+          top.append(dims);
+        }
+
+        // preview
+        const previewWrap = document.createElement('div');
+        previewWrap.style.cssText = 'background:#111;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;max-height:110px;min-height:48px;border-bottom:1px solid #2a2a2a';
+        let previewEl;
+        if (item.type === 'image') {
+          previewEl = document.createElement('img');
+          previewEl.src = item.url;
+          previewEl.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain';
+          previewEl.loading = 'lazy';
+        } else if (item.type === 'video') {
+          previewEl = document.createElement('video');
+          previewEl.src = item.url;
+          previewEl.muted = true;
+          previewEl.loop = true;
+          previewEl.playsInline = true;
+          previewEl.style.cssText = 'max-width:100%;max-height:100%';
+          previewWrap.onclick = () => { previewEl.paused ? previewEl.play() : previewEl.pause(); };
+        } else {
+          previewEl = document.createElement('div');
+          previewEl.textContent = '♪';
+          previewEl.style.cssText = 'font-size:42px;opacity:0.5';
+        }
+        if (previewEl) previewWrap.appendChild(previewEl);
+
+        // name
+        const nameEl = document.createElement('div');
+        nameEl.style.cssText = 'padding:3px 6px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.9';
+        nameEl.textContent = item.alt || (item.url.split('/').pop() || '').split('?')[0];
+
+        // url hint
+        const urlHint = document.createElement('div');
+        urlHint.style.cssText = 'padding:1px 6px 4px;font-size:9px;opacity:.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid #2a2a2a';
+        urlHint.textContent = item.url;
+
+        card.append(top, previewWrap, nameEl, urlHint);
+
+        // interactions
+        cb.addEventListener('change', updateDownloadButton);
+        card.addEventListener('click', (e) => {
+          if (e.target !== cb && e.target !== previewEl) {
+            cb.checked = !cb.checked;
+            updateDownloadButton();
+          }
+        });
+
+        grid.appendChild(card);
+        checkMap.set(item, cb);
+      });
+
+      updateDownloadButton();
+    }
+
+    function getCheckedItems() {
+      return visibleItems.filter(it => checkMap.get(it)?.checked);
+    }
+
+    function updateDownloadButton() {
+      const btn = document.getElementById('btn-download');
+      if (!btn) return;
+      const n = getCheckedItems().length;
+      btn.textContent = `Download Selected (${n})`;
+    }
+
+    function applyFilters() {
+      const typeFilter = document.getElementById('filter-type').value;
+      const minSize = parseInt(document.getElementById('filter-minsize').value, 10) || 0;
+
+      visibleItems = items.filter(it => {
+        if (typeFilter && it.type !== typeFilter) return false;
+        if (minSize && it.type === 'image') {
+          const ww = it.w || 0, hh = it.h || 0;
+          if (ww < minSize && hh < minSize) return false;
+        }
+        return true;
+      });
+
+      renderGrid(visibleItems);
+    }
+
+    // Wire toolbar
+    document.getElementById('btn-selall').onclick = () => {
+      checkMap.forEach(cb => cb.checked = true);
+      updateDownloadButton();
+    };
+    document.getElementById('btn-none').onclick = () => {
+      checkMap.forEach(cb => cb.checked = false);
+      updateDownloadButton();
+    };
+    document.getElementById('btn-invert').onclick = () => {
+      checkMap.forEach(cb => cb.checked = !cb.checked);
+      updateDownloadButton();
+    };
+    document.getElementById('filter-type').onchange = applyFilters;
+    document.getElementById('filter-minsize').oninput = applyFilters;
+
+    document.getElementById('btn-download').onclick = () => {
+      const sel = getCheckedItems();
+      if (!sel.length) {
+        alert('No items selected.');
+        return;
+      }
+      performDownloads(sel);
+    };
+
+    document.getElementById('btn-copy').onclick = () => {
+      const sel = getCheckedItems();
+      const text = sel.map(i => i.url).join('\n');
+      navigator.clipboard.writeText(text).then(
+        () => alert(`Copied ${sel.length} URL(s) to clipboard`),
+        () => prompt('Copy the URLs manually:', text)
+      );
+    };
+
+    document.getElementById('mrip-close-btn').onclick = () => overlay.remove();
+
+    // ESC support
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        overlay.remove();
+        document.removeEventListener('keydown', onKey);
+      }
+    }
+    document.addEventListener('keydown', onKey, { once: true });
+
+    // Initial render
+    const countEl = document.getElementById('mrip-count');
+    if (countEl) countEl.textContent = `${items.length} media found`;
+
+    renderGrid(visibleItems);
+    applyFilters(); // applies initial filters if any
+  }
+
+  // === ENTRY POINT ===
+  const mediaItems = collectMedia();
+
+  if (!mediaItems.length) {
+    alert('mrip: No suitable media found on this page.\n\nTips: Scroll to load lazy images, or try on a different page.');
+    return;
+  }
+
+  createOverlay(mediaItems);
+  log('mrip dev overlay opened with', mediaItems.length, 'items');
+})();
+</script>
+
+<script>
+// Populate the demo grid with a bunch of varied images
+(function populateDemo() {
+  const grid = document.getElementById('image-grid');
+  if (!grid) return;
+
+  const samples = [
+    { w: 800, h: 600, id: 1011, label: 'Large landscape' },
+    { w: 400, h: 400, id: 1005, label: 'Square' },
+    { w: 200, h: 300, id: 1016, label: 'Portrait small' },
+    { w: 1200, h: 628, id: 160, label: 'Wide social' },
+    { w: 640, h: 480, id: 201, label: 'Classic' },
+    { w: 300, h: 300, id: 29, label: 'Small square' },
+    { w: 900, h: 1200, id: 251, label: 'Tall' },
+    { w: 1920, h: 1080, id: 1009, label: 'HD' },
+  ];
+
+  samples.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <img src="https://picsum.photos/id/${s.id}/${s.w}/${s.h}" width="${s.w}" height="${s.h}" alt="${s.label}">
+      <div class="meta">${s.label}<br><span style="opacity:.5;font-size:10px">${s.w}×${s.h}</span></div>
+    `;
+    grid.appendChild(card);
+  });
+
+  // Add a couple of local-ish / same-origin style (actually still picsum but different)
+  const extra = document.createElement('div');
+  extra.className = 'card';
+  extra.innerHTML = `<img src="https://picsum.photos/id/180/640/480" alt="Extra"><div class="meta">Extra image</div>`;
+  grid.appendChild(extra);
+})();
+
+// Make the drag bookmarklet link contain a compact version of the code
+(function setupDragBookmarklet() {
+  // Support both the original install link and the new prominent top banner link
+  const ids = ['drag-bookmarklet', 'top-drag-bookmarklet'];
+  ids.forEach(id => {
+    const link = document.getElementById(id);
+    if (!link) return;
+
+  // We embed a slightly compacted version of the dev function for the drag target.
+  // For the real thing, users should copy the long string from README.md
+  const compact = `javascript:(function(){'use strict';const ID='mrip-overlay';if(document.getElementById(ID)){document.getElementById(ID).remove();return;}function log(...a){console.log('[mrip]',...a)}function sanitize(n){return(n||'media').replace(/[<>:"/\\\\|?*]/g,'_').slice(0,110)||'media'}function ext(u,t){u=u.split(/[?#]/)[0];const m=u.match(/\\.([a-z0-9]{2,5})$/i);if(m)return'.'+m[1].toLowerCase();return t==='image'?'.jpg':t==='video'?'.mp4':t==='audio'?'.mp3':''}function up(u){if(!u)return u;if(u.includes('pinimg.com'))return u.replace(/\\/(originals|\\d+x)\\//i,'/originals/').replace(/\\/236x\\//i,'/736x/');return u}function collect(){const o=[],s=new Set;document.querySelectorAll('img').forEach(el=>{let u=el.currentSrc||el.src||'';if(!u||u.startsWith('data:')&&u.length<200)return;const w=el.naturalWidth||el.width||0,h=el.naturalHeight||el.height||0;if(w<36&&h<36)return;u=up(u);if(s.has(u))return;s.add(u);o.push({url:u,type:'image',w,h,alt:(el.alt||'').trim()})});document.querySelectorAll('video,source').forEach(v=>{const u=v.currentSrc||v.src;if(u&&!s.has(u)){s.add(u);o.push({url:u,type:'video',alt:''})}});document.querySelectorAll('audio,source').forEach(a=>{const u=a.currentSrc||a.src;if(u&&!s.has(u)){s.add(u);o.push({url:u,type:'audio',alt:''})}});document.querySelectorAll('a[href]').forEach(a=>{const h=a.href;if(h&&/\\.(jpe?g|png|gif|webp|mp4|webm|mp3|wav|ogg)(\\?|$)/i.test(h)&&!s.has(h)){s.add(h);o.push({url:h,type:/\\.(mp4|webm)/i.test(h)?'video':/\\.(mp3|wav|ogg)/i.test(h)?'audio':'image',alt:''})}});return o}async function dlFS(it,d){try{const r=await fetch(it.url,{mode:'cors'});if(!r.ok)throw 0;const b=await r.blob();const e=ext(it.url,it.type);const n=sanitize((it.alt||it.url.split('/').pop()||'f')+e);const fh=await d.getFileHandle(n,{create:true});const w=await fh.createWritable();await w.write(b);await w.close();}catch(e){await dlLink(it)}}function dlLink(it){return new Promise(r=>{const a=document.createElement('a');a.href=it.url;a.download=sanitize((it.alt||it.url.split('/').pop()||'f')+ext(it.url,it.type));a.style.cssText='position:absolute;left:-9999px';document.body.append(a);a.click();setTimeout(()=>{a.remove();r()},130)})}async function go(sel){if(!sel.length)return;let dh=null;if('showDirectoryPicker'in window){try{dh=await showDirectoryPicker({id:'mrip',mode:'readwrite',startIn:'downloads'})}catch(e){}}const p=document.getElementById('mrip-progress');let c=0;for(const it of sel){c++;if(p)p.textContent='Downloading '+c+'/'+sel.length+'...';try{if(dh)await dlFS(it,dh);else await dlLink(it)}catch(e){}await new Promise(r=>setTimeout(r,120))}if(p)p.textContent='Done. Closing...';setTimeout(()=>document.getElementById(ID)?.remove(),900)}function ui(items){const o=document.createElement('div');o.id=ID;o.style.cssText='position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.78);font-family:system-ui;color:#eee;display:flex;flex-direction:column';const h=document.createElement('div');h.style.cssText='padding:6px 10px;background:#111;border-bottom:1px solid #333;display:flex;align-items:center';h.innerHTML='<b style="margin-right:8px">mrip</b><span id="mrip-mode" style="font-size:9px;opacity:.5;background:#222;padding:1px 3px;border-radius:2px;margin-left:4px">DL</span><span id="mrip-count" style="opacity:.6"></span><div style="flex:1"></div><button id="mrip-x" style="background:#222;border:1px solid #555;color:#ddd;padding:3px 8px">Close</button>';o.append(h);const _sup='showDirectoryPicker'in window;if(_sup){var mm=document.getElementById('mrip-mode');if(mm){mm.textContent='FS';mm.title='Direct writes (Edge/Chrome/Brave/Opera)'} }else{var mm=document.getElementById('mrip-mode');if(mm){mm.title='Standard downloads (Firefox + fallbacks)'}}const t=document.createElement('div');t.style.cssText='padding:4px 10px;background:#1a1a1a;border-bottom:1px solid #333;display:flex;gap:4px;flex-wrap:wrap;font-size:12px';t.innerHTML='<button id="sa">All</button><button id="sn">None</button><select id="ft"><option value="">All</option><option value="image">Images</option><option value="video">Video</option><option value="audio">Audio</option></select><input id="ms" type="number" value="50" style="width:48px;background:#222;border:1px solid #444;color:#ddd">px <span style="flex:1"></span><button id="cp">Copy URLs</button><button id="go" style="background:#063">Download Selected</button>';o.append(t);const g=document.createElement('div');g.style.cssText='flex:1;overflow:auto;padding:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px';o.append(g);const f=document.createElement('div');f.style.cssText='padding:4px 10px;background:#111;font-size:11px;border-top:1px solid #333';f.innerHTML='<span id="mrip-progress"></span> <span style="opacity:.5;margin-left:10px">Personal use • Respect copyright</span>';o.append(f);document.body.append(o);let vis=items;const ch=new Map();function r(list){g.innerHTML='';ch.clear();list.forEach(it=>{const c=document.createElement('div');c.style.cssText='background:#222;border:1px solid #333;border-radius:5px;overflow:hidden;font-size:11px';const top=document.createElement('div');top.style.cssText='padding:2px 4px;background:#1a1a1a;display:flex;align-items:center;gap:4px';const cb=document.createElement('input');cb.type='checkbox';cb.checked=false;const bd=document.createElement('span');bd.textContent=it.type;bd.style.fontSize='9px';top.append(cb,bd);const nm=document.createElement('div');nm.style.cssText='padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';nm.textContent=it.alt||it.url.split('/').pop();const pr=document.createElement('div');pr.style.cssText='background:#111;display:flex;align-items:center;justify-content:center;overflow:hidden;max-height:110px;min-height:48px;border-bottom:1px solid #2a2a2a';let p;if(it.type==='image'){p=document.createElement('img');p.src=it.url;p.style.maxWidth='100%';p.style.maxHeight='100%'}else if(it.type==='video'){p=document.createElement('video');p.src=it.url;p.muted=true;p.style.maxHeight='100%'}else{p=document.createElement('div');p.textContent='♫';p.style.fontSize='28px';p.style.opacity='.5'}if(p)pr.append(p);const u=document.createElement('div');u.style.cssText='font-size:9px;padding:1px 4px;opacity:.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';u.textContent=it.url;c.append(top,pr,nm,u);cb.onchange=u2; c.onclick=e=>{if(e.target!==cb&&e.target.tagName!=='VIDEO') {cb.checked=!cb.checked;u2()}};g.append(c);ch.set(it,cb)});u2()}function u2(){const b=document.getElementById('go');if(b)b.textContent='Download Selected ('+Array.from(ch.values()).filter(x=>x.checked).length+')'}function flt(){const ty=document.getElementById('ft').value;const ms=+document.getElementById('ms').value||0;vis=items.filter(i=>{if(ty&&i.type!==ty)return!1;if(ms&&i.type==='image'&&(i.w||0)<ms&&(i.h||0)<ms)return!1;return!0});r(vis)}function getSel(){return vis.filter(i=>ch.get(i)?.checked)}document.getElementById('sa').onclick=()=>{ch.forEach(c=>c.checked=!0);u2()};document.getElementById('sn').onclick=()=>{ch.forEach(c=>c.checked=!1);u2()};document.getElementById('ft').onchange=flt;document.getElementById('ms').oninput=flt;document.getElementById('go').onclick=()=>{const s=getSel();if(s.length)go(s)};document.getElementById('cp').onclick=()=>{const s=getSel().map(i=>i.url).join('\\n');navigator.clipboard.writeText(s).catch(()=>{})};document.getElementById('mrip-x').onclick=()=>o.remove();document.addEventListener('keydown',e=>{if(e.key==='Escape')o.remove()},{once:true});r(vis);document.getElementById('mrip-count').textContent=items.length+' items'}const its=(function(){const o=[],s=new Set;document.querySelectorAll('img').forEach(el=>{let u=el.currentSrc||el.src||'';if(!u||s.has(u))return;const w=el.naturalWidth||el.width||0,h=el.naturalHeight||el.height||0;if(w<30&&h<30)return;s.add(u);o.push({url:u,type:'image',w,h,alt:el.alt||''})});return o})();if(its.length)ui(its);else alert('No images found for demo bookmarklet');})();`;
+
+  // Set a safe short version for dragging. The full powerful one is in the README.
+  // When user drags, they get a working minimal version. They can replace the URL later with the full one from README.
+  link.href = 'javascript:' + encodeURIComponent('/* mrip demo - replace with full version from README.md */ alert("For the full powerful mrip, copy the long javascript: string from the README.md file in the mrip folder and edit this bookmark URL.");');
+  // Better: make the link actually contain a working (if limited) bookmarklet
+  link.href = compact;
+  link.title = 'Drag to bookmarks bar. For the latest full version, see README.md';
+
+  // Also make the text update hint
+  link.addEventListener('dragstart', () => {
+    link.style.opacity = '0.6';
+  });
+  link.addEventListener('dragend', () => {
+    link.style.opacity = '1';
+  });
+  });
+})();
+</script>
+</body>
+</html>
