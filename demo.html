@@ -41,8 +41,9 @@
       1. Scroll around this page (some images are "lazy" style).<br>
       2. Click the big green <strong>Run mrip (dev)</strong> button below — it runs the readable development version.<br>
       3. Or use the bookmarklet string from README.md.<br>
-      4. To install the real bookmarklet, drag the link in the Install box to your bookmarks bar.
-      <br><br><strong>Browser support:</strong> Edge/Chrome/Brave/Opera = full (incl. folder picker). Firefox = excellent overlay + standard downloads (no picker).
+      4. To install the real bookmarklet, drag the green link in the prominent banner or the Install box below to your bookmarks bar. Re-drag after updates to refresh.
+      <br><br><strong>New in this version:</strong> Live search in the overlay, better scaled tiles, default unchecked, FS/DL badge, improved download fallback.
+      <br><strong>Browser support:</strong> Edge/Chrome/Brave/Opera = full (incl. folder picker). Firefox = excellent overlay + standard downloads (no picker).
     </div>
   </div>
 
@@ -55,12 +56,26 @@
   </div>
 
   <div class="section install">
-    <strong>Install the bookmarklet (drag this):</strong><br>
+    <strong>Install the bookmarklet (drag this or use copy button):</strong><br>
     <a href="#" id="drag-bookmarklet" draggable="true">Drag this to your Bookmarks Bar → mrip</a>
+    <button onclick="copyLatestBookmarklet()" style="margin-left:12px; background:#0a4; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px;">Copy latest JS string</button>
     <div style="font-size:12px;margin-top:6px;opacity:.7">
-      (After dragging, edit the bookmark if needed and paste the full javascript: string from README.md as the URL.)
+      (After dragging or copying, edit the bookmark URL field and paste the full javascript: string. Re-drag or re-copy after any updates.)
     </div>
   </div>
+
+  <script>
+  function copyLatestBookmarklet() {
+    // The latest is maintained in dist/mrip.bookmarklet.txt
+    // For self-contained demo, we alert the method; in practice copy from the file or use the drag link
+    const text = 'Open dist/mrip.bookmarklet.txt in the mrip folder and copy the long javascript: line, or use the drag link above.';
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Instructions copied to clipboard. For the full string, open the dist/mrip.bookmarklet.txt file next to this demo.html and paste the javascript:(function... line into your bookmark URL.');
+    }).catch(() => {
+      prompt('Copy this instruction:', text);
+    });
+  }
+  </script>
 
   <div class="section">
     <h3 style="margin-bottom:8px">Sample Images (mix of sizes + origins)</h3>

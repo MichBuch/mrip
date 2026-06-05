@@ -235,6 +235,15 @@
 
     document.body.appendChild(o);
 
+    // Add a search input for slick filtering (after append so grid exists)
+    const searchBar = document.createElement('div');
+    searchBar.style.cssText = 'padding: 8px 12px; background:#1a1a1a; border-bottom:1px solid #333; flex-shrink:0;';
+    searchBar.innerHTML = `
+      <input id="mrip-search" type="text" placeholder="Search filenames or alt text..." 
+             style="width:100%; padding:6px 10px; background:#222; border:1px solid #444; color:#eee; border-radius:4px; font-size:12px;">
+    `;
+    o.insertBefore(searchBar, grid);
+
     let vis = items.slice();
     const ch = new Map();
 
@@ -267,8 +276,11 @@
         u.style.cssText = 'padding:1px 5px 3px;font-size:9px;opacity:.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid #2a2a2a';
         u.textContent = it.url;
         c.append(top, pr, nm, u);
-        cb.onchange = updateBtn;
-        c.onclick = e => { if (e.target !== cb && e.target.tagName !== 'VIDEO' && e.target.tagName !== 'IMG') { cb.checked = !cb.checked; updateBtn(); } };
+        cb.onchange = () => {
+          c.style.border = cb.checked ? '2px solid #0a4' : '1px solid #333';
+          updateBtn();
+        };
+        c.onclick = e => { if (e.target !== cb && e.target.tagName !== 'VIDEO' && e.target.tagName !== 'IMG') { cb.checked = !cb.checked; c.style.border = cb.checked ? '2px solid #0a4' : '1px solid #333'; updateBtn(); } };
         grid.append(c);
         ch.set(it, cb);
       });
@@ -284,9 +296,14 @@
     function filter() {
       const ty = document.getElementById('ft').value;
       const ms = +document.getElementById('ms').value || 0;
+      const search = (document.getElementById('mrip-search')?.value || '').toLowerCase().trim();
       vis = items.filter(i => {
         if (ty && i.type !== ty) return false;
         if (ms && i.type === 'image' && (i.w || 0) < ms && (i.h || 0) < ms) return false;
+        if (search) {
+          const hay = (i.alt || '') + ' ' + (i.url || '');
+          if (!hay.toLowerCase().includes(search)) return false;
+        }
         return true;
       });
       render(vis);
@@ -297,6 +314,8 @@
     document.getElementById('si').onclick = () => { ch.forEach(c => c.checked = !c.checked); updateBtn(); };
     document.getElementById('ft').onchange = filter;
     document.getElementById('ms').oninput = filter;
+    const searchInput = document.getElementById('mrip-search');
+    if (searchInput) searchInput.oninput = filter;
     document.getElementById('go').onclick = () => { const s = getSel(); if (s.length) runDownloads(s); };
     document.getElementById('cp').onclick = () => {
       const txt = getSel().map(i => i.url).join('\n');
