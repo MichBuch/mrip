@@ -167,6 +167,20 @@ Built for personal tooling in the `mrip` project (c:\lib\dev\mrip).
 
 Use at your own risk. Respect copyright and site rules.
 
+## Commercial Use, Sale, and Distribution
+
+If you want to sell mrip or distribute it (digital download or physical media like USB/SSD/SD cards), see the detailed guide in `COMMERCIAL_DISTRIBUTION.md`.
+
+It covers:
+- Recommended packaging and sales platforms (Gumroad, etc.)
+- Physical media distribution tips
+- Licensing models (personal vs commercial/redistribution)
+- Required legal disclaimers and sample EULA text
+- Marketing do's and don'ts to reduce risk
+- Practical next steps
+
+**Strong recommendation**: Consult a lawyer before selling or commercially distributing any tool that helps download web content. Copyright and terms-of-service issues can be significant.
+
 ---
 
 **Quick start**: Copy the long `javascript:...` line above into a new bookmark named `mrip`. Go to a media-rich page and click it.
