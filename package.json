@@ -1,0 +1,14 @@
+{
+  "name": "mrip",
+  "version": "1.2.0",
+  "description": "mrip — Media Ripper bookmarklet",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.js",
+    "build:watch": "node --watch build.js"
+  },
+  "devDependencies": {
+    "terser": "^5.36.0"
+  }
+}

@@ -52,62 +52,102 @@
     const results = [];
     const seen = new Set();
 
-    // Images
-    document.querySelectorAll('img').forEach((img) => {
-      let url = img.currentSrc || img.src || '';
-      if (!url) return;
-      if (url.startsWith('data:') && url.length < 300) return;
-      const w = img.naturalWidth || img.width || 0;
-      const h = img.naturalHeight || img.height || 0;
-      if (w > 0 && h > 0 && w < 36 && h < 36) return;
-      url = upgradeUrlForQuality(url);
-      if (seen.has(url)) return;
-      seen.add(url);
-      results.push({
-        url,
-        type: 'image',
-        w, h,
-        alt: (img.alt || img.title || img.getAttribute('data-alt') || '').trim(),
-        el: img
-      });
-    });
+    function scanDoc(doc, iframeLabel) {
+      const prefix = iframeLabel ? '[iframe] ' : '';
 
-    // Videos
-    document.querySelectorAll('video').forEach((vid) => {
-      const cands = [];
-      if (vid.currentSrc) cands.push(vid.currentSrc);
-      if (vid.src) cands.push(vid.src);
-      vid.querySelectorAll('source').forEach(s => s.src && cands.push(s.src));
-      cands.forEach(u => {
-        if (!u || seen.has(u)) return;
-        seen.add(u);
-        results.push({ url: u, type: 'video', alt: (vid.title || '').trim(), el: vid });
+      // Images
+      doc.querySelectorAll('img').forEach((img) => {
+        let url = img.currentSrc || img.src || '';
+        if (!url) return;
+        if (url.startsWith('data:') && url.length < 300) return;
+        const w = img.naturalWidth || img.width || 0;
+        const h = img.naturalHeight || img.height || 0;
+        if (w > 0 && h > 0 && w < 36 && h < 36) return;
+        url = upgradeUrlForQuality(url);
+        if (seen.has(url)) return;
+        seen.add(url);
+        results.push({
+          url,
+          type: 'image',
+          w, h,
+          alt: (prefix + (img.alt || img.title || img.getAttribute('data-alt') || '')).trim(),
+          el: img
+        });
       });
-    });
 
-    // Audio
-    document.querySelectorAll('audio').forEach((aud) => {
-      const cands = [];
-      if (aud.currentSrc) cands.push(aud.currentSrc);
-      if (aud.src) cands.push(aud.src);
-      aud.querySelectorAll('source').forEach(s => s.src && cands.push(s.src));
-      cands.forEach(u => {
-        if (!u || seen.has(u)) return;
-        seen.add(u);
-        results.push({ url: u, type: 'audio', alt: (aud.title || '').trim(), el: aud });
+      // Videos — including blob: URLs from MSE players (BBC, YouTube, etc.)
+      doc.querySelectorAll('video').forEach((vid) => {
+        const cands = [];
+        if (vid.currentSrc) cands.push(vid.currentSrc);
+        if (vid.src) cands.push(vid.src);
+        vid.querySelectorAll('source').forEach(s => s.src && cands.push(s.src));
+        cands.forEach(u => {
+          if (!u || seen.has(u)) return;
+          seen.add(u);
+          results.push({ url: u, type: 'video', alt: (prefix + (vid.title || '')).trim(), el: vid });
+        });
       });
-    });
 
-    // Direct links with media extensions
-    document.querySelectorAll('a[href]').forEach((a) => {
-      const h = a.href;
-      if (!h || seen.has(h)) return;
-      const lower = h.toLowerCase();
-      if (/\.(jpe?g|png|gif|webp|avif|svg|mp4|webm|mov|mp3|wav|ogg|flac|m4a)(\?|$|#)/i.test(lower)) {
-        seen.add(h);
-        const t = /\.(mp4|webm|mov)/i.test(lower) ? 'video'
-                : /\.(mp3|wav|ogg|flac|m4a)/i.test(lower) ? 'audio' : 'image';
-        results.push({ url: h, type: t, alt: (a.textContent || a.title || '').trim().slice(0, 80), el: a });
+      // Audio
+      doc.querySelectorAll('audio').forEach((aud) => {
+        const cands = [];
+        if (aud.currentSrc) cands.push(aud.currentSrc);
+        if (aud.src) cands.push(aud.src);
+        aud.querySelectorAll('source').forEach(s => s.src && cands.push(s.src));
+        cands.forEach(u => {
+          if (!u || seen.has(u)) return;
+          seen.add(u);
+          results.push({ url: u, type: 'audio', alt: (prefix + (aud.title || '')).trim(), el: aud });
+        });
+      });
+
+      // Direct links with media extensions
+      doc.querySelectorAll('a[href]').forEach((a) => {
+        const h = a.href;
+        if (!h || seen.has(h)) return;
+        const lower = h.toLowerCase();
+        if (/\.(jpe?g|png|gif|webp|avif|svg|mp4|webm|mov|mp3|wav|ogg|flac|m4a)(\?|$|#)/i.test(lower)) {
+          seen.add(h);
+          const t = /\.(mp4|webm|mov)/i.test(lower) ? 'video'
+                  : /\.(mp3|wav|ogg|flac|m4a)/i.test(lower) ? 'audio' : 'image';
+          results.push({ url: h, type: t, alt: (prefix + (a.textContent || a.title || '')).trim().slice(0, 80), el: a });
+        }
+      });
+    }
+
+    // Scan the main document
+    scanDoc(document, null);
+
+    // Scan iframes — same-origin ones give full DOM access;
+    // cross-origin ones are blocked by the browser but we surface their src URL.
+    document.querySelectorAll('iframe').forEach((fr) => {
+      let innerDoc = null;
+      try {
+        innerDoc = fr.contentDocument || fr.contentWindow?.document;
+      } catch (e) { /* cross-origin — blocked */ }
+
+      if (innerDoc) {
+        // Same-origin: do a full scan of the iframe's document
+        const label = fr.title || fr.name || fr.id || fr.src || 'iframe';
+        scanDoc(innerDoc, label);
+      } else {
+        // Cross-origin: at least record the iframe src itself if it looks like media
+        // or an embeddable player page (so the user can see it and open it manually)
+        const src = fr.src || fr.getAttribute('data-src') || '';
+        if (src && !seen.has(src)) {
+          seen.add(src);
+          // Classify as video if the URL hints at a video player / platform
+          const isVideoEmbed = /youtube|youtu\.be|vimeo|bbc\.|dailymotion|twitch|player|video|stream/i.test(src);
+          if (isVideoEmbed) {
+            results.push({
+              url: src,
+              type: 'video',
+              alt: ('[cross-origin iframe] ' + (fr.title || fr.name || '')).trim(),
+              el: fr,
+              isIframeSrc: true   // flag so UI can hint "open in new tab"
+            });
+          }
+        }
       }
     });
 
@@ -172,6 +212,11 @@
     for (const item of selected) {
       i++;
       if (prog) prog.textContent = `Downloading ${i}/${selected.length}...`;
+      // Cross-origin iframe sources can't be fetched — skip silently
+      if (item.isIframeSrc) {
+        if (prog) prog.textContent = `Skipping cross-origin iframe source (${i}/${selected.length}) — open it manually`;
+        continue;
+      }
       try {
         if (dir) {
           try {
@@ -266,6 +311,17 @@
         pr.style.cssText = 'background:#111;display:flex;align-items:center;justify-content:center;overflow:hidden;max-height:110px;min-height:48px;border-bottom:1px solid #2a2a2a';
         let p;
         if (it.type === 'image') { p = document.createElement('img'); p.src = it.url; p.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain'; p.loading = 'lazy'; }
+        else if (it.type === 'video' && it.isIframeSrc) {
+          // Cross-origin iframe player — can't embed or download directly
+          p = document.createElement('div');
+          p.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px';
+          p.innerHTML = `<span style="font-size:26px;opacity:.6">▶</span><span style="font-size:9px;opacity:.5;text-align:center">cross-origin player<br>(open to download)</span>`;
+          const openBtn = document.createElement('a');
+          openBtn.href = it.url; openBtn.target = '_blank'; openBtn.rel = 'noopener noreferrer';
+          openBtn.textContent = 'Open player ↗';
+          openBtn.style.cssText = 'font-size:10px;padding:3px 7px;background:#1f3a6e;border:1px solid #2a5aa0;border-radius:3px;color:#9ec3ff;text-decoration:none;display:block';
+          p.append(openBtn);
+        }
         else if (it.type === 'video') { p = document.createElement('video'); p.src = it.url; p.muted = true; p.loop = true; p.playsInline = true; p.style.cssText = 'max-width:100%;max-height:100%'; pr.onclick = () => p.paused ? p.play() : p.pause(); }
         else { p = document.createElement('div'); p.textContent = '♫'; p.style.cssText = 'font-size:36px;opacity:.5'; }
         if (p) pr.append(p);

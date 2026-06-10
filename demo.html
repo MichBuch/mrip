@@ -121,7 +121,7 @@
 <script id="mrip-src">
 // ==================== mrip DEV VERSION (readable) ====================
 // Paste / edit this block when developing. The bookmarklet in README is the compacted version of this logic.
-(function mripDev() {
+function runMripDev() {(function mripDev() {
   'use strict';
   const OVERLAY_ID = 'mrip-overlay';
   if (document.getElementById(OVERLAY_ID)) {
@@ -578,7 +578,7 @@
 
   createOverlay(mediaItems);
   log('mrip dev overlay opened with', mediaItems.length, 'items');
-})();
+})();}
 </script>
 
 <script>
